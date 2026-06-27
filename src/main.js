@@ -14,7 +14,6 @@ import {
 const searchForm = document.querySelector('.form');
 const loadMoreBtn = document.querySelector('.load-more-btn');
 
-// Глобальний стан пагінації
 let currentQuery = '';
 let currentPage = 1;
 const perPage = 15;
@@ -37,12 +36,11 @@ async function handleSearch(event) {
     return;
   }
 
-  // Зберігаємо нове слово та скидаємо сторінку на початкову
   currentQuery = searchQuery;
   currentPage = 1;
 
   clearGallery();
-  hideLoadMoreButton(); // Ховаємо кнопку перед новим запитом
+  hideLoadMoreButton(); 
   showLoader();
 
   try {
@@ -59,10 +57,20 @@ async function handleSearch(event) {
 
     createGallery(data.hits);
 
-    // Перевіряємо, чи є взагалі сенс показувати кнопку (якщо результатів більше ніж 1 сторінка)
-    if (data.totalHits > perPage) {
+    // --- ОНОВЛЕНА ЛОГІКА ПЕРЕВІРКИ КІНЦЯ КОЛЕКЦІЇ НА 1-Й СТОРІНЦІ ---
+    if (data.totalHits <= perPage) {
+      // Якщо всі знайдені картинки вмістилися на першій сторінці
+      hideLoadMoreButton(); // Про всяк випадок переконуємося, що вона прихована
+      iziToast.info({
+        title: 'End of results',
+        message: "We're sorry, but you've reached the end of search results.",
+        position: 'topRight',
+      });
+    } else {
+      // Якщо картинок більше, ніж на одну сторінку, показуємо кнопку
       showLoadMoreButton();
     }
+
   } catch (error) {
     showErrorNotification();
   } finally {
@@ -72,11 +80,10 @@ async function handleSearch(event) {
   event.currentTarget.reset();
 }
 
-// --- ОБРОБКА КЛІКУ НА LOAD MORE ---
 async function handleLoadMore() {
-  currentPage += 1; // Збільшуємо номер сторінки на 1
+  currentPage += 1;
   
-  hideLoadMoreButton(); // Тимчасово ховаємо кнопку під час завантаження
+  hideLoadMoreButton();
   showLoader();
 
   try {
@@ -84,21 +91,19 @@ async function handleLoadMore() {
     
     createGallery(data.hits);
     
-    // Функція плавного скролу сторінки
     smoothScroll();
 
-    // Розрахунок ліміту: чи дійшов користувач до кінця колекції
     const totalPages = Math.ceil(data.totalHits / perPage);
 
     if (currentPage >= totalPages) {
-      hideLoadMoreButton(); // Ховаємо назовсім
+      hideLoadMoreButton();
       iziToast.info({
         title: 'End of results',
         message: "We're sorry, but you've reached the end of search results.",
         position: 'topRight',
       });
     } else {
-      showLoadMoreButton(); // Якщо картинки ще є, знову показуємо кнопку
+      showLoadMoreButton();
     }
   } catch (error) {
     showErrorNotification();
@@ -107,15 +112,12 @@ async function handleLoadMore() {
   }
 }
 
-// --- ФУНКЦІЯ ПЛАВНОГО СКРОЛУ ---
 function smoothScroll() {
   const galleryItem = document.querySelector('.gallery-item');
   
   if (galleryItem) {
-    // Отримуємо висоту однієї картки
     const { height: cardHeight } = galleryItem.getBoundingClientRect();
     
-    // Прокручуємо на дві висоти картки
     window.scrollBy({
       top: cardHeight * 2,
       behavior: 'smooth',
